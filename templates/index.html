@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Coffee Shop Sales</title>
+    <link rel="stylesheet" href="https://cdn.simplecss.org/simple.min.css">
+</head>
+<body>
+    <header>
+        <h1>Coffee Shop Sales</h1>
+        <nav>
+            <a href="{{ url_for('add') }}">Add New Sale</a>
+            <a href="{{ url_for('report') }}">View Report</a>
+        </nav>
+    </header>
+    <main>
+        <table>
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Quantity</th>
+                    <th>Price per Item</th>
+                    <th>Total Price</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sale in sales %}
+                <tr>
+                    <td>{{ sale[1] }}</td>
+                    <td>{{ sale[2] }}</td>
+                    <td>${{ "%.2f"|format(sale[3]) }}</td>
+                    <td>${{ "%.2f"|format(sale[4]) }}</td>
+                    <td>
+                        <a href="{{ url_for('edit', sale_id=sale[0]) }}">Edit</a>
+                        <form action="{{ url_for('delete', sale_id=sale[0]) }}" method="post" style="display:inline;">
+                            <button type="submit">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </main>
+</body>
+</html>
