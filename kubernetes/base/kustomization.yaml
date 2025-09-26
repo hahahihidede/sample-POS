@@ -1,0 +1,21 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - deployment.yaml
+  - service.yaml
+
+configMapGenerator:
+  - name: app-config
+    literals:
+      - GKE_REGION="default" # This will be overridden by overlays
+      - SPANNER_PROJECT_ID="your-gcp-project-id"
+      - SPANNER_INSTANCE_ID="your-spanner-instance-id"
+      - SPANNER_DATABASE_ID="your-spanner-db-id"
+      - DB_NAME="your-cloudsql-db-name"
+      - DB_USER="your-cloudsql-user"
+      - CLOUDSQL_INSTANCE_CONNECTION_NAME="your-gcp-project-id:your-region:your-instance-id"
+
+secretGenerator:
+  - name: app-secrets
+    literals:
+      - DB_PASSWORD="your-cloudsql-password"
