@@ -1,0 +1,7 @@
+CREATE TABLE IF NOT EXISTS sales (
+    sale_id SERIAL PRIMARY KEY,
+    product_name VARCHAR(100) NOT NULL,
+    quantity INT NOT NULL,
+    price_per_item NUMERIC(10, 2) NOT NULL,
+    sale_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
