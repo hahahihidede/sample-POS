@@ -7,19 +7,16 @@
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <style>
         body { padding-top: 5rem; }
-        .db-toggle {
-            margin-right: 15px;
-        }
-        .db-active {
-            font-weight: bold;
-            color: #28a745 !important;
-        }
+        .db-toggle { margin-right: 15px; }
+        .db-active { font-weight: bold; color: #28a745 !important; }
     </style>
 </head>
 <body>
 
+{% set url_params = {'db': db} if APP_MODE == 'stateless' else {} %}
+
 <nav class="navbar navbar-expand-md navbar-dark bg-dark fixed-top">
-    <a class="navbar-brand" href="{{ url_for('index') }}">Coffee POS</a>
+    <a class="navbar-brand" href="{{ url_for('index', **url_params) }}">Coffee POS</a>
     <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarsExampleDefault" aria-controls="navbarsExampleDefault" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
     </button>
@@ -27,16 +24,16 @@
     <div class="collapse navbar-collapse" id="navbarsExampleDefault">
         <ul class="navbar-nav mr-auto">
             <li class="nav-item">
-                <a class="nav-link" href="{{ url_for('index') }}">Sales Orders</a>
+                <a class="nav-link" href="{{ url_for('index', **url_params) }}">Sales Orders</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="{{ url_for('list_products') }}">Products</a>
+                <a class="nav-link" href="{{ url_for('list_products', **url_params) }}">Products</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="{{ url_for('list_employees') }}">Employees</a>
+                <a class="nav-link" href="{{ url_for('list_employees', **url_params) }}">Employees</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="{{ url_for('list_customers') }}">Customers</a>
+                <a class="nav-link" href="{{ url_for('list_customers', **url_params) }}">Customers</a>
             </li>
         </ul>
         <div class="form-inline my-2 my-lg-0 db-toggle">
@@ -63,46 +60,45 @@
 <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 <script>
-    document.getElementById('db-selector').addEventListener('change', function() {
-        const statusEl = document.getElementById('db-status');
+document.getElementById('db-selector').addEventListener('change', function() {
+    const newDb = this.value;
 
-        // 1. Show "in progress" message
+    if ("{{ APP_MODE }}" === "stateless") {
+        // In stateless mode, we reload the page with the new DB choice in the query string.
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set('db', newDb);
+        window.location.href = currentUrl.toString();
+    } else {
+        // In stateful mode, we use the fetch API to update the session.
+        const statusEl = document.getElementById('db-status');
         statusEl.textContent = 'Switching...';
         statusEl.className = 'navbar-text ml-2 text-warning';
 
         fetch('/select_db', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ db: this.value }),
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ db: newDb }),
         })
         .then(response => {
-            if (!response.ok) {
-                throw new Error(`Server responded with status: ${response.status}`);
-            }
+            if (!response.ok) throw new Error(`Server responded with status: ${response.status}`);
             return response.json();
         })
         .then(data => {
             if (data.success) {
-                // 2. Show "success" message
                 statusEl.textContent = 'Success!';
                 statusEl.className = 'navbar-text ml-2 text-success';
-                // 3. Reload after a short delay to show the message
-                setTimeout(() => {
-                    window.location.reload();
-                }, 750);
+                setTimeout(() => window.location.reload(), 750);
             } else {
                 throw new Error(data.message || 'Unknown application error');
             }
         })
         .catch(error => {
-            // 4. Show "failure" message
             console.error('Error switching database:', error);
             statusEl.textContent = 'Failed!';
             statusEl.className = 'navbar-text ml-2 text-danger';
         });
-    });
+    }
+});
 </script>
 </body>
 </html>
