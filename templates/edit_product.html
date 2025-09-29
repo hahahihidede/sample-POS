@@ -4,6 +4,9 @@
 <h1 class="mb-4">Edit Product</h1>
 
 <form method="post">
+    {% if APP_MODE == 'stateless' %}
+    <input type="hidden" name="db" value="{{ db }}">
+    {% endif %}
     <div class="form-group">
         <label for="name">Product Name</label>
         <input type="text" class="form-control" id="name" name="name" value="{{ product[1] }}" required>

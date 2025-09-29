@@ -4,6 +4,9 @@
 <h1 class="mb-4">Add a New Sale</h1>
 
 <form method="post" id="sale-form">
+    {% if APP_MODE == 'stateless' %}
+    <input type="hidden" name="db" value="{{ db }}">
+    {% endif %}
     <div class="form-group">
         <label for="product_id">Product</label>
         <select class="form-control" id="product_id" name="product_id" required>
