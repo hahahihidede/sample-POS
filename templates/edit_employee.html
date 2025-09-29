@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1 class="mb-4">Edit Employee</h1>
+
+<form method="post">
+    <div class="form-group">
+        <label for="first_name">First Name</label>
+        <input type="text" class="form-control" id="first_name" name="first_name" value="{{ employee[1] }}" required>
+    </div>
+    <div class="form-group">
+        <label for="last_name">Last Name</label>
+        <input type="text" class="form-control" id="last_name" name="last_name" value="{{ employee[2] }}" required>
+    </div>
+    <div class="form-group">
+        <label for="position">Position</label>
+        <input type="text" class="form-control" id="position" name="position" value="{{ employee[3] }}" required>
+    </div>
+    <div class="form-group">
+        <label for="hire_date">Hire Date</label>
+        <input type="date" class="form-control" id="hire_date" name="hire_date" value="{{ employee[4].strftime('%Y-%m-%d') if employee[4] else '' }}" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Save Changes</button>
+    <a href="{{ url_for('list_employees') }}" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}

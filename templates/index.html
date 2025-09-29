@@ -1,46 +1,43 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Coffee Shop Sales</title>
-    <link rel="stylesheet" href="https://cdn.simplecss.org/simple.min.css">
-</head>
-<body>
-    <header>
-        <h1>Coffee Shop Sales</h1>
-        <nav>
-            <a href="{{ url_for('add') }}">Add New Sale</a>
-            <a href="{{ url_for('report') }}">View Report</a>
-        </nav>
-    </header>
-    <main>
-        <table>
-            <thead>
-                <tr>
-                    <th>Product</th>
-                    <th>Quantity</th>
-                    <th>Price per Item</th>
-                    <th>Total Price</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for sale in sales %}
-                <tr>
-                    <td>{{ sale[1] }}</td>
-                    <td>{{ sale[2] }}</td>
-                    <td>${{ "%.2f"|format(sale[3]) }}</td>
-                    <td>${{ "%.2f"|format(sale[4]) }}</td>
-                    <td>
-                        <a href="{{ url_for('edit', sale_id=sale[0]) }}">Edit</a>
-                        <form action="{{ url_for('delete', sale_id=sale[0]) }}" method="post" style="display:inline;">
-                            <button type="submit">Delete</button>
-                        </form>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </main>
-</body>
-</html>
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Sales Orders</h1>
+    <a href="{{ url_for('add_sale') }}" class="btn btn-success">Add Sale</a>
+</div>
+
+<p>Displaying data from: <strong class="{% if db == 'postgres' %}text-primary{% else %}text-info{% endif %}">{% if db == 'postgres' %}PostgreSQL{% else %}Cloud Spanner{% endif %}</strong></p>
+
+<div class="table-responsive">
+    <table class="table table-striped table-hover">
+        <thead class="thead-dark">
+            <tr>
+                <th>Order ID</th>
+                <th>Product</th>
+                <th>Employee</th>
+                <th>Customer</th>
+                <th>Quantity</th>
+                <th>Total Price</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for order in sales_orders %}
+            <tr>
+                <td>{{ order[0] }}</td>
+                <td>{{ order[1] }}</td>
+                <td>{{ order[2] }}</td>
+                <td>{{ order[3] if order[3] is not none else 'Guest' }}</td>
+                <td>{{ order[4] }}</td>
+                <td>${{ "%.2f"|format(order[5]) }}</td>
+                <td>{{ order[6].strftime('%Y-%m-%d %H:%M') if order[6] else '' }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="7" class="text-center">No sales orders found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

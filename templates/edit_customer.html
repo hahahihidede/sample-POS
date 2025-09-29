@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1 class="mb-4">Edit Customer</h1>
+
+<form method="post">
+    <div class="form-group">
+        <label for="first_name">First Name</label>
+        <input type="text" class="form-control" id="first_name" name="first_name" value="{{ customer[1] }}" required>
+    </div>
+    <div class="form-group">
+        <label for="last_name">Last Name</label>
+        <input type="text" class="form-control" id="last_name" name="last_name" value="{{ customer[2] }}" required>
+    </div>
+    <div class="form-group">
+        <label for="email">Email Address</label>
+        <input type="email" class="form-control" id="email" name="email" value="{{ customer[3] }}">
+    </div>
+    <div class="form-group">
+        <label for="join_date">Join Date</label>
+        <input type="date" class="form-control" id="join_date" name="join_date" value="{{ customer[4].strftime('%Y-%m-%d') if customer[4] else '' }}" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Save Changes</button>
+    <a href="{{ url_for('list_customers') }}" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}

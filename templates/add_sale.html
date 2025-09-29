@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1 class="mb-4">Add a New Sale</h1>
+
+<form method="post" id="sale-form">
+    <div class="form-group">
+        <label for="product_id">Product</label>
+        <select class="form-control" id="product_id" name="product_id" required>
+            <option value="" disabled selected>Select a product</option>
+            {% for product in products %}
+                <option value="{{ product[0] }}" data-price="{{ product[3] }}">{{ product[1] }} - ${{ "%.2f"|format(product[3]) }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="quantity">Quantity</label>
+        <input type="number" class="form-control" id="quantity" name="quantity" value="1" min="1" required>
+    </div>
+    <div class="form-group">
+        <label for="employee_id">Employee (Cashier)</label>
+        <select class="form-control" id="employee_id" name="employee_id" required>
+            <option value="" disabled selected>Select an employee</option>
+            {% for employee in employees %}
+                <option value="{{ employee[0] }}">{{ employee[1] }} {{ employee[2] }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="customer_id">Customer (Optional)</label>
+        <select class="form-control" id="customer_id" name="customer_id">
+            <option value="">Guest Customer</option>
+            {% for customer in customers %}
+                <option value="{{ customer[0] }}">{{ customer[1] }} {{ customer[2] }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="form-group">
+        <h4>Total Price: $<span id="total-price">0.00</span></h4>
+        <input type="hidden" id="total_price" name="total_price" value="0">
+    </div>
+    <button type="submit" class="btn btn-primary">Create Sale</button>
+    <a href="{{ url_for('index') }}" class="btn btn-secondary">Cancel</a>
+</form>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const productSelect = document.getElementById('product_id');
+        const quantityInput = document.getElementById('quantity');
+        const totalPriceSpan = document.getElementById('total-price');
+        const totalPriceInput = document.getElementById('total_price');
+
+        function updateTotalPrice() {
+            const selectedOption = productSelect.options[productSelect.selectedIndex];
+            const price = parseFloat(selectedOption.getAttribute('data-price')) || 0;
+            const quantity = parseInt(quantityInput.value) || 0;
+            const total = price * quantity;
+
+            totalPriceSpan.textContent = total.toFixed(2);
+            totalPriceInput.value = total.toFixed(2);
+        }
+
+        productSelect.addEventListener('change', updateTotalPrice);
+        quantityInput.addEventListener('input', updateTotalPrice);
+    });
+</script>
+{% endblock %}
