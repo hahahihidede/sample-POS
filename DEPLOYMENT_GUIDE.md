@@ -1,6 +1,6 @@
-# Deployment Guide: Sales Application on GKE with Cloud SQL and Spanner
+# Deployment Guide: Coffee Shop POS on GKE
 
-This guide provides comprehensive instructions for deploying the dual-database sales application to two Google Kubernetes Engine (GKE) clusters (one in the US, one in Asia), connected to both Cloud SQL for PostgreSQL and Cloud Spanner.
+This guide provides instructions for deploying the Coffee Shop POS application to a single, budget-friendly Google Kubernetes Engine (GKE) cluster, connected to both a Cloud SQL for PostgreSQL 17 instance and a Cloud Spanner instance.
 
 ## 1. Prerequisites
 
@@ -10,81 +10,67 @@ Before you begin, ensure you have the following installed and configured:
 - **Docker**: For building and pushing container images.
 - **A Google Cloud Platform project**: With billing enabled.
 
-## 2. Infrastructure Setup
+## 2. Infrastructure Setup (Single Region)
+
+All resources will be provisioned in a single region to be cost-effective. We'll use `us-central1` as an example.
 
 ### 2.1. Create an Artifact Registry Repository
 Create a repository to store your Docker images.
 ```bash
-export REGION="us-central1" # Or any region of your choice
-export REPO_NAME="sales-app-repo"
+export REGION="us-central1"
+export REPO_NAME="pos-app-repo"
 gcloud artifacts repositories create $REPO_NAME \
     --repository-format=docker \
     --location=$REGION \
-    --description="Docker repository for the sales application"
+    --description="Docker repository for the POS application"
 ```
 
-### 2.2. Set Up Cloud SQL for PostgreSQL
-Create two Cloud SQL instances, one for each region.
-
-**For the US Cluster:**
+### 2.2. Set Up Cloud SQL for PostgreSQL 17
+Create a budget-friendly Cloud SQL instance.
 ```bash
-export US_INSTANCE_NAME="sales-db-instance-us"
-export US_REGION="us-central1"
-export DB_USER="sales_user"
+export INSTANCE_NAME="pos-db-postgres"
+export DB_USER="pos_user"
 export DB_PASSWORD="your-strong-password" # Replace with a secure password
+export DB_NAME="pos_database"
 
-gcloud sql instances create $US_INSTANCE_NAME \
-    --database-version=POSTGRES_14 \
-    --region=$US_REGION \
-    --cpu=2 \
-    --memory=4GB
+# Create a budget-friendly instance with PostgreSQL 17
+gcloud sql instances create $INSTANCE_NAME \
+    --database-version=POSTGRES_17 \
+    --region=$REGION \
+    --tier=db-g1-small # A cost-effective machine type
 
+# Create a user for the database
 gcloud sql users create $DB_USER \
-    --instance=$US_INSTANCE_NAME \
+    --instance=$INSTANCE_NAME \
     --password=$DB_PASSWORD
-```
-**For the Asia Cluster:**
-```bash
-export ASIA_INSTANCE_NAME="sales-db-instance-asia"
-export ASIA_REGION="asia-southeast1"
 
-gcloud sql instances create $ASIA_INSTANCE_NAME \
-    --database-version=POSTGRES_14 \
-    --region=$ASIA_REGION \
-    --cpu=2 \
-    --memory=4GB
-
-gcloud sql users create $DB_USER \
-    --instance=$ASIA_INSTANCE_NAME \
-    --password=$DB_PASSWORD
+# Create the database itself
+gcloud sql databases create $DB_NAME --instance=$INSTANCE_NAME
 ```
+**Note:** After creation, run the contents of `init.sql` against this database to create the tables and add sample data.
 
 ### 2.3. Set Up Cloud Spanner
-Create two Cloud Spanner instances, one for each region.
-
-**For the US Cluster:**
+Create a small, single-node Cloud Spanner instance.
 ```bash
-export US_SPANNER_INSTANCE_ID="sales-spanner-us"
-export US_SPANNER_DATABASE_ID="sales-db-us"
-gcloud spanner instances create $US_SPANNER_INSTANCE_ID --config=regional-us-central1 --description="US Spanner Instance" --nodes=1
-gcloud spanner databases create $US_SPANNER_DATABASE_ID --instance=$US_SPANNER_INSTANCE_ID --ddl-file=spanner_schema.ddl
+export SPANNER_INSTANCE_ID="pos-spanner-instance"
+export SPANNER_DATABASE_ID="pos-spanner-db"
+
+# Create a cost-effective 1-node instance
+gcloud spanner instances create $SPANNER_INSTANCE_ID \
+    --config=regional-us-central1 \
+    --description="POS Spanner Instance" \
+    --nodes=1
+
+# Create the Spanner database and apply the schema
+gcloud spanner databases create $SPANNER_DATABASE_ID \
+    --instance=$SPANNER_INSTANCE_ID \
+    --ddl-file=spanner_schema.ddl
 ```
-**For the Asia Cluster:**
-```bash
-export ASIA_SPANNER_INSTANCE_ID="sales-spanner-asia"
-export ASIA_SPANNER_DATABASE_ID="sales-db-asia"
-gcloud spanner instances create $ASIA_SPANNER_INSTANCE_ID --config=regional-asia-southeast1 --description="Asia Spanner Instance" --nodes=1
-gcloud spanner databases create $ASIA_SPANNER_DATABASE_ID --instance=$ASIA_SPANNER_INSTANCE_ID --ddl-file=spanner_schema.ddl
-```
 
-### 2.4. Create GKE Clusters
-Create two GKE clusters, one in the US and one in Asia.
+### 2.4. Create a GKE Cluster
+Create a GKE cluster using the cost-optimized Autopilot mode.
 ```bash
-# US Cluster
-gcloud container clusters create-auto sales-cluster-us --region=us-central1
-
-# Asia Cluster
-gcloud container clusters create-auto sales-cluster-asia --region=asia-southeast1
+gcloud container clusters create-auto pos-cluster --region=$REGION
 ```
 
 ## 3. Build and Push the Docker Image
@@ -96,7 +82,7 @@ gcloud container clusters create-auto sales-cluster-asia --region=asia-southeast
 2.  **Build the Image**:
     ```bash
     export PROJECT_ID=$(gcloud config get-value project)
-    export IMAGE_TAG="$REGION-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/sales-app:latest"
+    export IMAGE_TAG="$REGION-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/pos-app:latest"
     docker build -t $IMAGE_TAG .
     ```
 3.  **Push the Image**:
@@ -106,54 +92,30 @@ gcloud container clusters create-auto sales-cluster-asia --region=asia-southeast
 
 ## 4. Configure Kubernetes Manifests
 
-You must replace the placeholder values in the Kubernetes configuration files before deploying.
+You will need to update the placeholder values in the `kubernetes/` directory. **Note:** The current manifest files are structured for a multi-cluster setup. You will need to simplify them for this single-cluster deployment, likely by only using and modifying the `kubernetes/base` files and removing the `overlays`.
 
-1.  **Image Path**: In `kubernetes/base/deployment.yaml`, replace `gcr.io/your-gcp-project-id/sales-app:latest` with your image path (`$IMAGE_TAG`).
-
-2.  **Base `kustomization.yaml`**: In `kubernetes/base/kustomization.yaml`:
-    - Replace `your-gcp-project-id` with your actual GCP Project ID.
-    - Replace `your-cloudsql-db-name` with the database name (e.g., `postgres`).
-    - Replace `your-cloudsql-user` with the user you created (`sales_user`).
-    - Replace `your-cloudsql-password` in the `secretGenerator` with your actual password.
-
-3.  **US Overlay**: In `kubernetes/overlays/us/config.yaml`:
-    - Set `CLOUDSQL_INSTANCE_CONNECTION_NAME` to the connection name of your US Cloud SQL instance (find it via `gcloud sql instances describe $US_INSTANCE_NAME`).
-    - Set `SPANNER_INSTANCE_ID` to `$US_SPANNER_INSTANCE_ID`.
-
-4.  **Asia Overlay**: In `kubernetes/overlays/asia/config.yaml`:
-    - Set `CLOUDSQL_INSTANCE_CONNECTION_NAME` to the connection name of your Asia Cloud SQL instance.
-    - Set `SPANNER_INSTANCE_ID` to `$ASIA_SPANNER_INSTANCE_ID`.
-
+A simplified `deployment.yaml` should have its image path updated and environment variables configured via a `ConfigMap` and `Secret` to pass the database credentials to the application.
 
 ## 5. Deploy the Application
 
-### 5.1. Deploy to the US Cluster
-```bash
-# Get credentials for the US cluster
-gcloud container clusters get-credentials sales-cluster-us --region=us-central1
-
-# Apply the US overlay
-kubectl apply -k kubernetes/overlays/us
-```
-
-### 5.2. Deploy to the Asia Cluster
-```bash
-# Get credentials for the Asia cluster
-gcloud container clusters get-credentials sales-cluster-asia --region=asia-southeast1
-
-# Apply the Asia overlay
-kubectl apply -k kubernetes/overlays/asia
-```
+1.  **Get Cluster Credentials**:
+    ```bash
+    gcloud container clusters get-credentials pos-cluster --region=$REGION
+    ```
+2.  **Apply Manifests**:
+    After configuring your Kubernetes YAML files (deployment, service, secrets), apply them:
+    ```bash
+    kubectl apply -f your-configured-manifest.yaml
+    ```
 
 ## 6. Verify the Deployment
 
-For each cluster, find the external IP address of the service and access the application in your browser.
-
+Find the external IP address of the service and access the application in your browser.
 ```bash
 # Wait for the service to get an external IP
-kubectl get service sales-app-service --watch
+kubectl get service --watch
 
-# Once you see an IP, open it in your browser:
-http://[EXTERNAL_IP]
+# Once you see an IP for your service, open it in your browser:
+# http://[EXTERNAL_IP]
 ```
-You should now be able to access the sales application running in each respective region.
+You should now be able to access the POS application. You can switch between PostgreSQL and Spanner using the dropdown in the navigation bar.

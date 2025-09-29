@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Coffee Shop POS</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body { padding-top: 5rem; }
+        .db-toggle {
+            margin-right: 15px;
+        }
+        .db-active {
+            font-weight: bold;
+            color: #28a745 !important;
+        }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-md navbar-dark bg-dark fixed-top">
+    <a class="navbar-brand" href="{{ url_for('index') }}">Coffee POS</a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarsExampleDefault" aria-controls="navbarsExampleDefault" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navbarsExampleDefault">
+        <ul class="navbar-nav mr-auto">
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('index') }}">Sales Orders</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('list_products') }}">Products</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('list_employees') }}">Employees</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('list_customers') }}">Customers</a>
+            </li>
+        </ul>
+        <div class="form-inline my-2 my-lg-0 db-toggle">
+             <span class="navbar-text mr-3">
+                Database: <strong class="text-white">{% if db == 'postgres' %}PostgreSQL{% elif db == 'spanner' %}Cloud Spanner{% else %}Dual Write{% endif %}</strong>
+             </span>
+            <select id="db-selector" class="form-control form-control-sm">
+                <option value="postgres" {% if db == 'postgres' %}selected{% endif %}>PostgreSQL Only</option>
+                <option value="spanner" {% if db == 'spanner' %}selected{% endif %}>Spanner Only</option>
+                <option value="dual" {% if db == 'dual' %}selected{% endif %}>Dual Write</option>
+            </select>
+            <span id="db-status" class="navbar-text ml-2"></span>
+        </div>
+    </div>
+</nav>
+
+<main role="main" class="container">
+    <div class="starter-template">
+        {% block content %}{% endblock %}
+    </div>
+</main>
+
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+<script>
+    document.getElementById('db-selector').addEventListener('change', function() {
+        const statusEl = document.getElementById('db-status');
+
+        // 1. Show "in progress" message
+        statusEl.textContent = 'Switching...';
+        statusEl.className = 'navbar-text ml-2 text-warning';
+
+        fetch('/select_db', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ db: this.value }),
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Server responded with status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                // 2. Show "success" message
+                statusEl.textContent = 'Success!';
+                statusEl.className = 'navbar-text ml-2 text-success';
+                // 3. Reload after a short delay to show the message
+                setTimeout(() => {
+                    window.location.reload();
+                }, 750);
+            } else {
+                throw new Error(data.message || 'Unknown application error');
+            }
+        })
+        .catch(error => {
+            // 4. Show "failure" message
+            console.error('Error switching database:', error);
+            statusEl.textContent = 'Failed!';
+            statusEl.className = 'navbar-text ml-2 text-danger';
+        });
+    });
+</script>
+</body>
+</html>
